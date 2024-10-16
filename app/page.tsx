@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable jsx-a11y/alt-text */
 "use client";
 
@@ -14,42 +16,51 @@ const Home = () => {
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [isPending, startTransition] = useTransition(); // Define this once
+
+  const handleUpload = async (formData: FormData) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      await axios.post(
+        "http://localhost:3000/api/storage/uploadthing",
+        formData,
+        {
+          onUploadProgress: (progressEvent) => {
+            const total = progressEvent.total || 0;
+            const progress = Math.round((progressEvent.loaded * 100) / total);
+            setUploadProgress(progress);
+          },
+        }
+      );
+      toast({
+        title: "Upload successful!",
+        description: "Your files have been uploaded.",
+      });
+      // Optionally clear the form or reset state here
+    } catch (error) {
+      const errorMessage =
+        (error as any).response?.data?.message || "Something went wrong.";
+      toast({
+        title: "Upload failed.",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      setIsDragOver(false); // Reset drag state
+    }
+  };
 
   const onDropAccepted = (acceptedFiles: File[]) => {
-    setIsUploading(true);
-
     const formData = new FormData();
     acceptedFiles.forEach((file) => {
       formData.append("files", file);
     });
 
-    axios
-      .post("/xyz", formData, {
-        onUploadProgress: (progressEvent) => {
-          const total = progressEvent.total || 0;
-          const progress = Math.round((progressEvent.loaded * 100) / total);
-          setUploadProgress(progress);
-        },
-      })
-      .then(() => {
-        toast({
-          title: "Upload successful!",
-          description: "Your files have been uploaded.",
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: "Upload failed.",
-          description: error.response?.data?.message || "Something went wrong.",
-          variant: "destructive",
-        });
-      })
-      .finally(() => {
-        setIsUploading(false);
-        setUploadProgress(0);
-      });
-
-    setIsDragOver(false);
+    handleUpload(formData);
   };
 
   const onDropRejected = (rejectedFiles: FileRejection[]) => {
@@ -63,14 +74,11 @@ const Home = () => {
     });
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isPending, startTransition] = useTransition();
-
   return (
     <div className="flex items-center justify-center">
       <div
         className={cn(
-          "relative  flex-1 my-16 w-[500px] h-[500px] rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:rounded-2xl flex justify-center flex-col items-center",
+          "relative flex-1 my-16 w-[500px] h-[500px] rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 lg:rounded-2xl flex justify-center flex-col items-center",
           { "ring-blue-900/25 bg-blue-900/10": isDragOver }
         )}
       >
